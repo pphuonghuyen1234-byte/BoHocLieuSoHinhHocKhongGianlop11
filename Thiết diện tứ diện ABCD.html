@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thiết diện tứ diện ABCD</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1c1c1a;--mut:#6b6b66;--card:#fff;--bd:#dcdcd4;--sec:#d9480f;--face:#2b6cb0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17181a;--fg:#ecece6;--mut:#a0a09a;--card:#202225;--bd:#35373b;--sec:#ff8c5a;--face:#6aa6e8}}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.w{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}p.s{margin:0 0 12px;color:var(--mut);font-size:14px}
+canvas{width:100%;height:auto;aspect-ratio:4/3;background:var(--card);border:1px solid var(--bd);border-radius:12px;touch-action:none;cursor:grab}
+.c{display:flex;gap:12px;align-items:center;margin:10px 0;font-size:14px;flex-wrap:wrap}
+input[type=range]{flex:1;min-width:140px}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.6}
+.box b{color:var(--sec)}
+</style></head><body><div class="w">
+<h1>Giao tuyến của (P) với các mặt của tứ diện ABCD</h1>
+<p class="s">(P) đi qua E ∈ AC, song song với AB và CD. Kéo để xoay hình; kéo thanh trượt để dịch E trên AC.</p>
+<canvas id="cv" width="800" height="600"></canvas>
+<div class="c"><span>AE/AC = <b id="tv">0.50</b></span><input id="t" type="range" min="0.1" max="0.9" step="0.01" value="0.5"></div>
+<div class="box">
+<b>Cách xác định:</b><br>
+1. Mặt (ABC): (P) ∩ (ABC) = EF, qua E song song AB, F ∈ BC.<br>
+2. Mặt (ACD): (P) ∩ (ACD) = EH, qua E song song CD, H ∈ AD.<br>
+3. Mặt (BCD): (P) ∩ (BCD) = FG, qua F song song CD, G ∈ BD.<br>
+4. Mặt (ABD): (P) ∩ (ABD) = HG, và HG ∥ AB.<br>
+<b>Kết luận:</b> (P) cắt các mặt (ABC), (BCD), (ABD), (ACD) lần lượt theo EF, FG, GH, HE. Vì EF ∥ HG ∥ AB và EH ∥ FG ∥ CD nên thiết diện <b>EFGH là hình bình hành</b>.
+</div></div>
+<script>
+const cv=document.getElementById('cv'),g=cv.getContext('2d');
+const V={A:[0,3,0],B:[-2.2,0,1.2],C:[0.6,0,-2],D:[2.3,0,1]};
+const faces=[['A','B','C'],['A','B','D'],['A','C','D'],['B','C','D']];
+const edges=[['A','B',[0,1]],['A','C',[0,2]],['A','D',[1,2]],['B','C',[0,3]],['B','D',[1,3]],['C','D',[2,3]]];
+const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cr=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const cen=[0,0,0];Object.values(V).forEach(p=>p.forEach((v,i)=>cen[i]+=v/4));
+const N=faces.map(f=>{let n=cr(sub(V[f[1]],V[f[0]]),sub(V[f[2]],V[f[0]]));if(dot(n,sub(V[f[0]],cen))<0)n=n.map(v=>-v);return n});
+let yaw=-0.7,pit=0.4,t=0.5;
+function rot(p){let[x,y,z]=p;let c=Math.cos(yaw),s=Math.sin(yaw);[x,z]=[c*x+s*z,-s*x+c*z];c=Math.cos(pit);s=Math.sin(pit);[y,z]=[c*y-s*z,s*y+c*z];return[x,y,z]}
+function pr(p){const r=rot([p[0]-cen[0],p[1]-cen[1],p[2]-cen[2]]);const k=14/(14-r[2]);return[400+r[0]*k*115,300-r[1]*k*115]}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const L=(a,b,u)=>a.map((v,i)=>v+u*(b[i]-v));
+function draw(){
+ const fg=css('--fg'),sec=css('--sec'),fc=css('--face');
+ g.clearRect(0,0,800,600);
+ // AE/AC=t ; AH/AD=t ; BF/BC=t ; BG/BD=t
+ const T={E:L(V.A,V.C,t),F:L(V.B,V.C,t),G:L(V.B,V.D,t),H:L(V.A,V.D,t)};
+ const front=N.map(n=>rot(n)[2]>0);
+ faces.forEach((f,i)=>{g.beginPath();f.forEach((k,j)=>{const p=pr(V[k]);j?g.lineTo(...p):g.moveTo(...p)});g.closePath();g.globalAlpha=front[i]?0.10:0.04;g.fillStyle=fc;g.fill()});
+ g.globalAlpha=1;
+ const line=(a,b,vis,w,col)=>{g.beginPath();g.setLineDash(vis?[]:[6,5]);g.lineWidth=w;g.strokeStyle=col;g.moveTo(...pr(a));g.lineTo(...pr(b));g.stroke();g.setLineDash([])};
+ edges.forEach(([a,b,fs])=>line(V[a],V[b],fs.some(i=>front[i]),1.8,fg));
+ g.beginPath();['E','F','G','H'].forEach((k,j)=>{const p=pr(T[k]);j?g.lineTo(...p):g.moveTo(...p)});g.closePath();
+ g.globalAlpha=0.45;g.fillStyle=sec;g.fill();g.globalAlpha=1;
+ [['E','F',0],['F','G',3],['G','H',1],['H','E',2]].forEach(([a,b,fi])=>line(T[a],T[b],front[fi],3,sec));
+ const c0=pr(cen);
+ const lab=(txt,p,col)=>{const q=pr(p);let dx=q[0]-c0[0],dy=q[1]-c0[1];const d=Math.hypot(dx,dy)||1;g.fillStyle=col;g.font='bold 18px system-ui';g.textAlign='center';g.textBaseline='middle';g.beginPath();g.arc(q[0],q[1],3.5,0,7);g.fill();g.fillText(txt,q[0]+dx/d*16,q[1]+dy/d*16)};
+ Object.keys(V).forEach(k=>lab(k,V[k],fg));
+ Object.keys(T).forEach(k=>lab(k,T[k],sec));
+}
+document.getElementById('t').oninput=e=>{t=+e.target.value;document.getElementById('tv').textContent=t.toFixed(2);draw()};
+let dr=false,lx,ly;
+cv.onpointerdown=e=>{dr=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId)};
+cv.onpointerup=()=>dr=false;
+cv.onpointermove=e=>{if(!dr)return;yaw+=(e.clientX-lx)*0.008;pit=Math.max(-1.4,Math.min(1.4,pit+(e.clientY-ly)*0.008));lx=e.clientX;ly=e.clientY;draw()};
+matchMedia('(prefers-color-scheme:dark)').onchange=draw;
+draw();
+</script></body></html>
